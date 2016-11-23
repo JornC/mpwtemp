@@ -1,0 +1,237 @@
+<link rel="import" href="/polymer/polymer.html">
+
+<dom-module id="meldingen-per-week">
+  <style>
+    .meldingen-per-week > ::content .axis {
+      font: 10px sans-serif;
+      fill: #DBA5C2;
+    }
+  
+    .meldingen-per-week > ::content .axis path,
+    .meldingen-per-week > ::content .axis line {
+      fill: none;
+      stroke: #DBA5C2;
+      shape-rendering: crispEdges;
+    }
+  </style>
+  
+  <template>
+    <style>
+    :host {
+      font-family: 'RO-Sans-Text', Arial, Sans-Serif;
+    }
+  
+    h1 {
+      margin: 10px 0px 4px 0px;
+      font-size: 3em;
+      font-family: 'RO-Sans-lf', Arial, Sans-Serif;
+    }
+  
+    p {
+      font-family: 'RO-Sans-lf', Arial, Sans-Serif;
+      line-height: 1em;
+      margin: 0;
+      font-size: 1em;
+    }
+  
+    .graph-title {
+      font-size: 1.2em;
+      line-height: 2.4em;
+      font-weight: bold;
+      fill: white;
+      padding: 10px;
+    }
+  
+    .bart,
+    .barb {
+      fill: #DBA5C2;
+    }
+  
+    .bart {
+      opacity: 0;
+    }
+  
+    .bar:hover .barb {
+      fill: #C5749E;
+    }
+  
+    .bar:hover .bart {
+      opacity: 0.1;
+    }
+  
+    div.tooltip::before {
+      content: "";
+      position: absolute;
+      height: 0px;
+      width: 0px;
+      top: -10px;
+      left: 40px;
+      border-style: solid;
+      border-width: 0px 8px 10px;
+      border-color: white transparent;
+    }
+  
+    div.tooltip { 
+      position: absolute;
+      text-align: center;
+      width: 100px;
+      height: 85px;
+      background: white;
+      color: #330022;
+      pointer-events: none;
+      display: inline;
+      font-size: 11px;
+      margin-left: -50px;
+      margin-top: 30px;
+      box-shadow: 0px 0px 3px grey;
+    }
+    </style>
+    
+    <div id="component" class="meldingen-per-week"></div>
+    
+  </template>
+  
+  <script>
+    Polymer({
+      is: "meldingen-per-week",
+      properties: {
+        url: String,
+        margin: {top: 60, right: 0, bottom: 30, left: 0},  
+        svgWidth: 800,
+        svgHeight: 240,
+        width: 800,
+        height: 150
+      },
+      lastDayOFWeek: function(d) {
+        return d3.time.day.offset(d, 6);
+      },
+      createElements: function() {
+        var me = this;
+        
+        var monthArray = new Array("jan","febr","mrt","apr","mei","jun","jul", "aug","sept","okt","nov","dec");
+    
+        this.parseDate = d3.time.format("%Y-%W");
+      
+        this.x = d3.scale.ordinal().rangeRoundBands([0, this.properties.width], .05);
+      
+        this.y = d3.scale.linear().range([this.properties.height, 0]);
+      
+        this.xAxis = d3.svg.axis()
+          .scale(this.x)
+          .orient("bottom")
+          //.tickSize(this.properties.margin.bottom)
+          .tickFormat(function(d) { return monthArray[me.lastDayOFWeek(d).getMonth()]; });
+      
+        this.tooltip = d3.select(this.$.component).append("div") 
+          .attr("class", "tooltip meldingen-per-week")
+          .style("opacity", 0);
+      
+        this.svg = d3.select(this.$.component).append("svg")
+          .attr("width", this.properties.svgWidth)
+          .attr("height", this.properties.svgHeight)
+          .style("background-color", "#A72264")
+          .append("g")
+          .attr("transform", "translate(" + this.properties.margin.left + "," + this.properties.margin.top + ")");
+      },
+      drawChart: function() {
+        var me = this;
+        var mehd3 = d3;
+    
+        me.x.domain(me.data.map(function(d) { return d.date; }));
+        me.y.domain([0, d3.max(me.data, function(d) { return d.value; })]);
+    
+        me.xAxis.tickValues(me.x.domain().filter(function(d) {
+          var dayOfMonth = me.lastDayOFWeek(d).getDate();
+          return (dayOfMonth >= 1 && dayOfMonth <= 7); 
+        })); //- Only show month if the 1st of the month is within this week
+    
+        me.svg.append("g")
+          .attr("class", "x axis meldingen-per-week")
+          .attr("transform", "translate(0," + me.properties.height + ")")
+          .call(me.xAxis)
+          .selectAll("text")
+          //.attr("x", margin.bottom / 2)
+          //.attr("y", margin.bottom / 2)
+          .style("text-anchor", "start");
+    
+        var bar = me.svg.selectAll("bar")
+          .data(me.data) 
+          .enter()
+          .append("g")
+          .attr("class", "bar meldingen-per-week");
+    
+        // Bottom bar
+        bar.append("rect")
+          .attr("class", "barb meldingen-per-week")
+          .attr("x", function(d) { return me.x(d.date); })
+          .attr("width", me.x.rangeBand())
+          .attr("y", function(d) { return me.y(d.value); })
+          .attr("height", function(d) { return me.properties.height - me.y(d.value); });
+    
+        // Top (hidden) bar
+        bar.append("rect")
+          .attr("class", "bart meldingen-per-week")
+          .attr("x", function(d) { return me.x(d.date); })
+          .attr("width", me.x.rangeBand())
+          .attr("y", function(d) { me.properties.height })
+          .attr("height", function(d) { return me.y(d.value); });
+    
+        bar.on("mousemove", function(d) {
+            me.tooltip.transition()
+              .duration(200)
+              .style("opacity", 1); 
+            me.tooltip.html(function() {
+                return "<h1 class='meldingen-per-week'>" + d.value + "</h1>"
+                  + "<p class='meldingen-per-week'>Week " + d3.time.format("%W")(d.date) + "</br>"
+                  + "ma " + d3.time.format("%d-%m-%Y")(d.date) + "</br>"
+                  + "zo " + d3.time.format("%d-%m-%Y")(me.lastDayOFWeek(d.date))
+                  + "</p>";
+              })
+              .style("left", (d3.event.pageX) + "px")
+              .style("top", (me.properties.svgHeight - me.properties.margin.bottom) + "px");
+          })
+          .on("mouseout", function(d) {
+            me.tooltip.transition()
+              .duration(500)
+              .style("opacity", 0);
+          });
+    
+        me.svg.append("text")
+          .data(me.data)
+          .attr("class", "graph-title meldingen-per-week")
+          .attr("x", me.properties.margin.top / 4)
+          .attr("y", 0 - (me.properties.margin.top / 2))
+          .attr("text-anchor", "left")
+          .text(function(d) {
+            var start = d3.time.format("%d-%m-%Y")(d3.min(me.data, function(d) { return d.date; } ));
+            var end = d3.time.format("%d-%m-%Y")(d3.max(me.data, function(d) { return me.lastDayOFWeek(d.date); } ));
+             return "AERIUS Register: meldingen van " + start + " t/m " + end;
+           });
+      },
+      getData: function () {
+        var me = this;
+        d3.csv(me.url, function (error, data) {
+          data.forEach(function(d) {
+            d.date = me.parseDate.parse(d.date);
+            d.value = +d.value;
+          });
+          
+          me.data = data;
+          me.drawChart();
+        });
+      },
+      attached: function() {
+        var me = this;
+        this.async(function() {
+          me.createElements();
+          me.getData();
+        });
+      },
+      urlChanged: function (oldValue, newValue) {
+        if(newValue && oldValue) {
+          this.getData();
+        }
+      }
+    });
+  </script>
+</dom-module>
