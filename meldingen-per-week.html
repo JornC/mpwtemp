@@ -94,8 +94,12 @@
   <script>
     Polymer({
       is: "meldingen-per-week",
+      domReady: false,
       properties: {
-        url: String,
+        url: {
+          type: String,
+          observer: "_urlChanged"
+        },
         margin: {top: 60, right: 0, bottom: 30, left: 0},  
         svgWidth: 800,
         svgHeight: 240,
@@ -132,51 +136,82 @@
           .style("background-color", "#A72264")
           .append("g")
           .attr("transform", "translate(" + this.properties.margin.left + "," + this.properties.margin.top + ")");
+          
+        this.titleField = this.svg.append("text")
+          .attr("class", "graph-title meldingen-per-week")
+          .attr("x", this.properties.margin.top / 4)
+          .attr("y", 0 - (this.properties.margin.top / 2))
+          .attr("text-anchor", "left");
+          
+        this.xAxisElement = this.svg.append("g")
+          .attr("class", "x axis meldingen-per-week")
+          .attr("transform", "translate(0," + me.properties.height + ")");
       },
       drawChart: function() {
         var me = this;
-        var mehd3 = d3;
-    
+        
+        
+        var t = d3.transition().duration(750);
+      
         me.x.domain(me.data.map(function(d) { return d.date; }));
         me.y.domain([0, d3.max(me.data, function(d) { return d.value; })]);
     
+        var selection = me.svg.selectAll(".bar").data(me.data);
+        
+        // UPDATE
         me.xAxis.tickValues(me.x.domain().filter(function(d) {
           var dayOfMonth = me.lastDayOFWeek(d).getDate();
           return (dayOfMonth >= 1 && dayOfMonth <= 7); 
         })); //- Only show month if the 1st of the month is within this week
-    
-        me.svg.append("g")
-          .attr("class", "x axis meldingen-per-week")
-          .attr("transform", "translate(0," + me.properties.height + ")")
-          .call(me.xAxis)
+        me.xAxisElement.call(me.xAxis)
           .selectAll("text")
           //.attr("x", margin.bottom / 2)
           //.attr("y", margin.bottom / 2)
           .style("text-anchor", "start");
-    
-        var bar = me.svg.selectAll("bar")
-          .data(me.data) 
-          .enter()
-          .append("g")
-          .attr("class", "bar meldingen-per-week");
-    
-        // Bottom bar
-        bar.append("rect")
-          .attr("class", "barb meldingen-per-week")
+        
+        me.setTitle(function(d) {
+            var start = d3.time.format("%d-%m-%Y")(d3.min(me.data, function(d) { return d.date; } ));
+            var end = d3.time.format("%d-%m-%Y")(d3.max(me.data, function(d) { return me.lastDayOFWeek(d.date); } ));
+            return "AERIUS Register: meldingen van " + start + " t/m " + end;
+          });
+          
+        selection.select(".barb")
+          .transition(t)
           .attr("x", function(d) { return me.x(d.date); })
           .attr("width", me.x.rangeBand())
           .attr("y", function(d) { return me.y(d.value); })
           .attr("height", function(d) { return me.properties.height - me.y(d.value); });
-    
+          
+        selection.select(".bart")
+          .transition(t)
+          .attr("x", function(d) { return me.x(d.date); })
+          .attr("width", me.x.rangeBand())
+          .attr("y", function(d) { me.properties.height })
+          .attr("height", function(d) { return me.y(d.value); });
+        
+        // ENTER
+        var g = selection.enter().append("g");
+        g.attr("class", "bar meldingen-per-week");
+        
+        // Bottom bar
+        g.append("rect")
+          .attr("class", "barb meldingen-per-week")
+          .transition(t)
+          .attr("x", function(d) { return me.x(d.date); })
+          .attr("width", me.x.rangeBand())
+          .attr("y", function(d) { return me.y(d.value); })
+          .attr("height", function(d) { return me.properties.height - me.y(d.value); });
+        
         // Top (hidden) bar
-        bar.append("rect")
+        g.append("rect")
           .attr("class", "bart meldingen-per-week")
+          .transition(t)
           .attr("x", function(d) { return me.x(d.date); })
           .attr("width", me.x.rangeBand())
           .attr("y", function(d) { me.properties.height })
           .attr("height", function(d) { return me.y(d.value); });
     
-        bar.on("mousemove", function(d) {
+        g.on("mousemove", function(d) {
             me.tooltip.transition()
               .duration(200)
               .style("opacity", 1); 
@@ -195,23 +230,17 @@
               .duration(500)
               .style("opacity", 0);
           });
-          
-        me.setTitle(function(d) {
-          var start = d3.time.format("%d-%m-%Y")(d3.min(me.data, function(d) { return d.date; } ));
-          var end = d3.time.format("%d-%m-%Y")(d3.max(me.data, function(d) { return me.lastDayOFWeek(d.date); } ));
-           return "AERIUS Register: meldingen van " + start + " t/m " + end;
-         });
+        
+        // EXIT
+        var exit = selection.exit().remove();
       },
       setTitle: function (f) {
-        this.svg.append("text")
-          .attr("class", "graph-title meldingen-per-week")
-          .attr("x", this.properties.margin.top / 4)
-          .attr("y", 0 - (this.properties.margin.top / 2))
-          .attr("text-anchor", "left")
-          .text(f);
+        this.titleField.text(f);
       },
       getData: function () {
         var me = this;
+        me.oldData = me.url;
+        
         d3.csv(me.url, function (error, data) {
           if(error) {
             me.setTitle(function (d) { return "Error while retrieving data!" });
@@ -226,15 +255,13 @@
           }
         });
       },
-      attached: function() {
-        var me = this;
-        this.async(function() {
-          me.createElements();
-          me.getData();
-        });
+      ready: function() {
+        this.domReady = true;
+        this.createElements();
+        this.getData();
       },
-      urlChanged: function (oldValue, newValue) {
-        if(newValue && oldValue) {
+      _urlChanged: function (e) {
+        if(this.domReady) {
           this.getData();
         }
       }

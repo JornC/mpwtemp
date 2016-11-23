@@ -5,7 +5,18 @@
     <script src="http://d3js.org/d3.v3.js"></script>
     <link rel="import" href="../meldingen-per-week.html">
   </head>
+  <script>
+    function switcheroo() {
+      var meldingen = document.getElementById('meldingen');
+      if(meldingen.url == "bar-data.csv") {
+        meldingen.url = "bar-data-orig.csv";
+      } else {
+        meldingen.url = "bar-data.csv";
+      }
+    }
+  </script>
   <body>
-    <meldingen-per-week url="bar-data.csv"></meldingen-per-week>
+    <meldingen-per-week id="meldingen" url="bar-data.csv"></meldingen-per-week>
+    <button onclick="switcheroo()">Wisseltruuk</button>
   </body>
 </html>
