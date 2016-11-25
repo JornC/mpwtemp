@@ -5,6 +5,7 @@
     <style>
     :host {
       font-family: 'RO-Sans-Text', Arial, Sans-Serif;
+      position: relative;
     }
     
     .aerius-weekly-barchart > ::content .axis {
@@ -70,6 +71,7 @@
     }
   
     div.tooltip { 
+      z-index: 5;
       position: absolute;
       text-align: center;
       width: 100px;
@@ -186,7 +188,8 @@
                   + "</p>";
               })
               .style("left", d3.event.pageX + "px")
-              .style("top", (me.properties.svgHeight - me.properties.margin.bottom) + "px");
+              .style("top", me.properties.svgHeight - me.properties.margin.bottom - (me.$.component.offsetTop + me.properties.svgHeight - me.properties.margin.bottom + 90 > window.innerHeight ? 90 : 0) + "px");
+              
           })
           .on("mouseout", function(d) {
             me.tooltip.transition()
