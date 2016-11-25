@@ -1,14 +1,14 @@
 <link rel="import" href="/polymer/polymer.html">
 
-<dom-module id="meldingen-per-week">
+<dom-module id="aerius-weekly-barchart">
   <style>
-    .meldingen-per-week > ::content .axis {
+    .aerius-weekly-barchart > ::content .axis {
       font: 10px sans-serif;
       fill: #DBA5C2;
     }
   
-    .meldingen-per-week > ::content .axis path,
-    .meldingen-per-week > ::content .axis line {
+    .aerius-weekly-barchart > ::content .axis path,
+    .aerius-weekly-barchart > ::content .axis line {
       fill: none;
       stroke: #DBA5C2;
       shape-rendering: crispEdges;
@@ -87,17 +87,22 @@
     }
     </style>
     
-    <div id="component" class="meldingen-per-week"></div>
+    <div id="component" class="aerius-weekly-barchart"></div>
     
   </template>
   
   <script>
     Polymer({
-      is: "meldingen-per-week",
+      is: "aerius-weekly-barchart",
       domReady: false,
       properties: {
+        title: {
+          type: String,
+          value: "{start} t/m {end}"
+        },
         url: {
           type: String,
+          value: "test?",
           observer: "_urlChanged"
         },
         margin: {top: 60, right: 0, bottom: 30, left: 0},  
@@ -127,7 +132,7 @@
           .tickFormat(function(d) { return monthArray[me.lastDayOFWeek(d).getMonth()]; });
       
         this.tooltip = d3.select(this.$.component).append("div") 
-          .attr("class", "tooltip meldingen-per-week")
+          .attr("class", "tooltip aerius-weekly-barchart")
           .style("opacity", 0);
       
         this.svg = d3.select(this.$.component).append("svg")
@@ -138,41 +143,77 @@
           .attr("transform", "translate(" + this.properties.margin.left + "," + this.properties.margin.top + ")");
           
         this.titleField = this.svg.append("text")
-          .attr("class", "graph-title meldingen-per-week")
+          .attr("class", "graph-title aerius-weekly-barchart")
           .attr("x", this.properties.margin.top / 4)
           .attr("y", 0 - (this.properties.margin.top / 2))
           .attr("text-anchor", "left");
           
         this.xAxisElement = this.svg.append("g")
-          .attr("class", "x axis meldingen-per-week")
+          .attr("class", "x axis aerius-weekly-barchart")
           .attr("transform", "translate(0," + me.properties.height + ")");
       },
       drawChart: function() {
         var me = this;
         
-        
-        var t = d3.transition().duration(750);
+        var t = d3.transition().duration(500);
       
         me.x.domain(me.data.map(function(d) { return d.date; }));
         me.y.domain([0, d3.max(me.data, function(d) { return d.value; })]);
     
         var selection = me.svg.selectAll(".bar").data(me.data);
         
+        // ENTER
+        var g = selection.enter().append("g");
+        g.attr("class", "bar aerius-weekly-barchart");
+        
+        // Bottom bar
+        g.append("rect")
+          .attr("class", "barb aerius-weekly-barchart")
+          .attr("height", function(d) { return 0; })
+          .attr("y", function(d) { return me.properties.height; });
+        
+        // Top (hidden) bar
+        g.append("rect")
+          .attr("class", "bart aerius-weekly-barchart");
+    
+        g.on("mousemove", function(d) {
+            me.tooltip.transition()
+              .duration(200)
+              .style("opacity", 1); 
+            me.tooltip.html(function() {
+                return "<h1 class='aerius-weekly-barchart'>" + d.value + "</h1>"
+                  + "<p class='aerius-weekly-barchart'>Week " + d3.time.format("%W")(d.date) + "</br>"
+                  + "ma " + d3.time.format("%d-%m-%Y")(d.date) + "</br>"
+                  + "zo " + d3.time.format("%d-%m-%Y")(me.lastDayOFWeek(d.date))
+                  + "</p>";
+              })
+              .style("left", d3.event.pageX + "px")
+              .style("top", (me.properties.svgHeight - me.properties.margin.bottom) + "px");
+          })
+          .on("mouseout", function(d) {
+            me.tooltip.transition()
+              .duration(250)
+              .style("opacity", 0);
+          });
+          
         // UPDATE
         me.xAxis.tickValues(me.x.domain().filter(function(d) {
           var dayOfMonth = me.lastDayOFWeek(d).getDate();
           return (dayOfMonth >= 1 && dayOfMonth <= 7); 
         })); //- Only show month if the 1st of the month is within this week
-        me.xAxisElement.call(me.xAxis)
+        me.xAxisElement
+          .transition(t)
+          .call(me.xAxis)
           .selectAll("text")
           //.attr("x", margin.bottom / 2)
           //.attr("y", margin.bottom / 2)
           .style("text-anchor", "start");
         
         me.setTitle(function(d) {
-            var start = d3.time.format("%d-%m-%Y")(d3.min(me.data, function(d) { return d.date; } ));
-            var end = d3.time.format("%d-%m-%Y")(d3.max(me.data, function(d) { return me.lastDayOFWeek(d.date); } ));
-            return "AERIUS Register: meldingen van " + start + " t/m " + end;
+            let start = d3.time.format("%d-%m-%Y")(d3.min(me.data, function(d) { return d.date; } ));
+            let end = d3.time.format("%d-%m-%Y")(d3.max(me.data, function(d) { return me.lastDayOFWeek(d.date); } ));
+            
+            return me.title.replace("{start}", start).replace("{end}", end);
           });
           
         selection.select(".barb")
@@ -186,53 +227,16 @@
           .transition(t)
           .attr("x", function(d) { return me.x(d.date); })
           .attr("width", me.x.rangeBand())
-          .attr("y", function(d) { me.properties.height })
           .attr("height", function(d) { return me.y(d.value); });
-        
-        // ENTER
-        var g = selection.enter().append("g");
-        g.attr("class", "bar meldingen-per-week");
-        
-        // Bottom bar
-        g.append("rect")
-          .attr("class", "barb meldingen-per-week")
-          .transition(t)
-          .attr("x", function(d) { return me.x(d.date); })
-          .attr("width", me.x.rangeBand())
-          .attr("y", function(d) { return me.y(d.value); })
-          .attr("height", function(d) { return me.properties.height - me.y(d.value); });
-        
-        // Top (hidden) bar
-        g.append("rect")
-          .attr("class", "bart meldingen-per-week")
-          .transition(t)
-          .attr("x", function(d) { return me.x(d.date); })
-          .attr("width", me.x.rangeBand())
-          .attr("y", function(d) { me.properties.height })
-          .attr("height", function(d) { return me.y(d.value); });
-    
-        g.on("mousemove", function(d) {
-            me.tooltip.transition()
-              .duration(200)
-              .style("opacity", 1); 
-            me.tooltip.html(function() {
-                return "<h1 class='meldingen-per-week'>" + d.value + "</h1>"
-                  + "<p class='meldingen-per-week'>Week " + d3.time.format("%W")(d.date) + "</br>"
-                  + "ma " + d3.time.format("%d-%m-%Y")(d.date) + "</br>"
-                  + "zo " + d3.time.format("%d-%m-%Y")(me.lastDayOFWeek(d.date))
-                  + "</p>";
-              })
-              .style("left", (d3.event.pageX) + "px")
-              .style("top", (me.properties.svgHeight - me.properties.margin.bottom) + "px");
-          })
-          .on("mouseout", function(d) {
-            me.tooltip.transition()
-              .duration(500)
-              .style("opacity", 0);
-          });
         
         // EXIT
-        var exit = selection.exit().remove();
+        selection.exit().select(".barb")
+          .transition()
+          .attr("y", function(d) { return me.properties.height; })
+          .attr("height", function(d) { return 0; })
+          .attr("x", function(d) { return me.properties.width; })
+          
+        selection.exit().transition().remove();
       },
       setTitle: function (f) {
         this.titleField.text(f);
@@ -264,6 +268,9 @@
         if(this.domReady) {
           this.getData();
         }
+      },
+      _titleChanged: function(e) {
+        alert(this.title);
       }
     });
   </script>

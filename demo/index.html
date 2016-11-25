@@ -3,20 +3,26 @@
   <head>
     <link type="text/css" rel="stylesheet" href="rijksoverheidfonts.css">
     <script src="http://d3js.org/d3.v3.js"></script>
-    <link rel="import" href="../meldingen-per-week.html">
+    <link rel="import" href="../aerius-weekly-barchart.html">
   </head>
   <script>
     function switcheroo() {
-      var meldingen = document.getElementById('meldingen');
-      if(meldingen.url == "bar-data.csv") {
-        meldingen.url = "bar-data-orig.csv";
+      var graph = document.getElementById('graph');
+      if(graph.url == "aanvragen.csv") {
+        graph.title = "AERIUS Register: Aanvragen per week van {start} t/m {end}";
+        graph.url = "meldingen.csv";
       } else {
-        meldingen.url = "bar-data.csv";
+        graph.title = "AERIUS Register: Meldingen per week van {start} t/m {end}";
+        graph.url = "aanvragen.csv";
       }
     }
   </script>
   <body>
-    <meldingen-per-week id="meldingen" url="bar-data.csv"></meldingen-per-week>
+    <aerius-weekly-barchart id="graph" url="meldingen.csv" title="AERIUS Register: Meldingen per week van {start} t/m {end}"></aerius-weekly-barchart>
     <button onclick="switcheroo()">Wisseltruuk</button>
+    <br/><br/><br/>
+    <aerius-weekly-barchart id="meldingen" url="meldingen.csv" title="AERIUS Register: Meldingen per week van {start} t/m {end}"></aerius-weekly-barchart>
+    <br/><br/><br/>
+    <aerius-weekly-barchart id="vergunningen" url="aanvragen.csv" title="AERIUS Register: Aanvragen per week van {start} t/m {end}"></aerius-weekly-barchart>
   </body>
 </html>
