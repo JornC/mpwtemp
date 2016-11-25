@@ -1,7 +1,12 @@
 <link rel="import" href="/polymer/polymer.html">
 
 <dom-module id="aerius-weekly-barchart">
-  <style>
+  <template>
+    <style>
+    :host {
+      font-family: 'RO-Sans-Text', Arial, Sans-Serif;
+    }
+    
     .aerius-weekly-barchart > ::content .axis {
       font: 10px sans-serif;
       fill: #DBA5C2;
@@ -12,13 +17,6 @@
       fill: none;
       stroke: #DBA5C2;
       shape-rendering: crispEdges;
-    }
-  </style>
-  
-  <template>
-    <style>
-    :host {
-      font-family: 'RO-Sans-Text', Arial, Sans-Serif;
     }
   
     h1 {
@@ -115,9 +113,9 @@
         return d3.time.day.offset(d, 6);
       },
       createElements: function() {
-        var me = this;
+        let me = this;
         
-        var monthArray = new Array("jan","febr","mrt","apr","mei","jun","jul", "aug","sept","okt","nov","dec");
+        let monthArray = new Array("jan","febr","mrt","apr","mei","jun","jul", "aug","sept","okt","nov","dec");
     
         this.parseDate = d3.time.format("%Y-%W");
       
@@ -153,17 +151,17 @@
           .attr("transform", "translate(0," + me.properties.height + ")");
       },
       drawChart: function() {
-        var me = this;
+        let me = this;
         
-        var t = d3.transition().duration(500);
+        let t = d3.transition().duration(500);
       
         me.x.domain(me.data.map(function(d) { return d.date; }));
         me.y.domain([0, d3.max(me.data, function(d) { return d.value; })]);
     
-        var selection = me.svg.selectAll(".bar").data(me.data);
+        let selection = me.svg.selectAll(".bar").data(me.data);
         
         // ENTER
-        var g = selection.enter().append("g");
+        let g = selection.enter().append("g");
         g.attr("class", "bar aerius-weekly-barchart");
         
         // Bottom bar
@@ -198,7 +196,7 @@
           
         // UPDATE
         me.xAxis.tickValues(me.x.domain().filter(function(d) {
-          var dayOfMonth = me.lastDayOFWeek(d).getDate();
+          let dayOfMonth = me.lastDayOFWeek(d).getDate();
           return (dayOfMonth >= 1 && dayOfMonth <= 7); 
         })); //- Only show month if the 1st of the month is within this week
         me.xAxisElement
@@ -237,14 +235,14 @@
         this.titleField.text(f);
       },
       getData: function () {
-        var me = this;
+        let me = this;
         me.oldData = me.url;
         
         d3.csv(me.url, function (error, data) {
           if(error) {
             me.setTitle(function (d) { return "Error while retrieving data!" });
             
-            var selection = me.svg.selectAll(".bar").data(me.data);
+            let selection = me.svg.selectAll(".bar").data(me.data);
             selection.transition().remove();
           } else {
             data.forEach(function(d) {
@@ -258,7 +256,7 @@
         });
       },
       updateTitle: function() {
-        var me = this;
+        let me = this;
         me.setTitle(function(d) {
             let start = d3.time.format("%d-%m-%Y")(d3.min(me.data, function(d) { return d.date; } ));
             let end = d3.time.format("%d-%m-%Y")(d3.max(me.data, function(d) { return me.lastDayOFWeek(d.date); } ));
