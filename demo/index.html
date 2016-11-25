@@ -6,6 +6,13 @@
     <link rel="import" href="../aerius-weekly-barchart.html">
   </head>
   <script>
+    function updateTxt() {
+      document.getElementById('graph').title = document.getElementById('title').value;
+    }
+    function updateUrl() {
+      document.getElementById('graph').url = document.getElementById('url').value;
+    }
+  
     function switcheroo() {
       var graph = document.getElementById('graph');
       if(graph.url == "aanvragen.csv") {
@@ -18,7 +25,10 @@
     }
   </script>
   <body>
-    <aerius-weekly-barchart id="graph" url="meldingen.csv" title="AERIUS Register: Meldingen per week van {start} t/m {end}"></aerius-weekly-barchart>
+    <aerius-weekly-barchart id="graph" url="meldingen.csv" title="AERIUS Register: Meldingen per week van {start} t/m {end}"></aerius-weekly-barchart><br />
+    <input placeholder="title" id="title" onkeyup="updateTxt()"> <br/>
+    <input placeholder="url" id="url" onchange="updateUrl()"><br /><br />
+    of<br /><br />
     <button onclick="switcheroo()">Wisseltruuk</button>
     <br/><br/><br/>
     <aerius-weekly-barchart id="meldingen" url="meldingen.csv" title="AERIUS Register: Meldingen per week van {start} t/m {end}"></aerius-weekly-barchart>

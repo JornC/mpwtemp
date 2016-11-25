@@ -98,11 +98,11 @@
       properties: {
         title: {
           type: String,
-          value: "{start} t/m {end}"
+          value: "{start} t/m {end}",
+          observer: "_titleChanged"
         },
         url: {
           type: String,
-          value: "test?",
           observer: "_urlChanged"
         },
         margin: {top: 60, right: 0, bottom: 30, left: 0},  
@@ -208,13 +208,8 @@
           //.attr("x", margin.bottom / 2)
           //.attr("y", margin.bottom / 2)
           .style("text-anchor", "start");
-        
-        me.setTitle(function(d) {
-            let start = d3.time.format("%d-%m-%Y")(d3.min(me.data, function(d) { return d.date; } ));
-            let end = d3.time.format("%d-%m-%Y")(d3.max(me.data, function(d) { return me.lastDayOFWeek(d.date); } ));
-            
-            return me.title.replace("{start}", start).replace("{end}", end);
-          });
+          
+        me.updateTitle();
           
         selection.select(".barb")
           .transition(t)
@@ -248,6 +243,9 @@
         d3.csv(me.url, function (error, data) {
           if(error) {
             me.setTitle(function (d) { return "Error while retrieving data!" });
+            
+            var selection = me.svg.selectAll(".bar").data(me.data);
+            selection.transition().remove();
           } else {
             data.forEach(function(d) {
               d.date = me.parseDate.parse(d.date);
@@ -258,6 +256,15 @@
             me.drawChart();
           }
         });
+      },
+      updateTitle: function() {
+        var me = this;
+        me.setTitle(function(d) {
+            let start = d3.time.format("%d-%m-%Y")(d3.min(me.data, function(d) { return d.date; } ));
+            let end = d3.time.format("%d-%m-%Y")(d3.max(me.data, function(d) { return me.lastDayOFWeek(d.date); } ));
+            
+            return me.title.replace("{start}", start).replace("{end}", end);
+          });
       },
       ready: function() {
         this.domReady = true;
@@ -270,7 +277,9 @@
         }
       },
       _titleChanged: function(e) {
-        alert(this.title);
+        if(this.domReady) {
+          this.updateTitle();
+        }
       }
     });
   </script>
